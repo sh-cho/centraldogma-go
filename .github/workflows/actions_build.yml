@@ -1,6 +1,4 @@
 name: CI
-env:
-  GO111MODULE: on
 on:
   push:
     branches:
@@ -17,29 +15,24 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.x, 1.16.x, 1.17.x, 1.18.x]
-        platform: [ubuntu-latest]
+        go-version: [1.24.x, 1.25.x]
+        platform: [ubuntu-latest, windows-latest]
         include:
-          # include windows, but only with the latest Go version, since there
-          # is very little in the library that is platform specific
-          - go-version: 1.x
-            platform: windows-latest
-
           # only update test coverage stats with the most recent go version on linux
-          - go-version: 1.x
+          - go-version: stable
             platform: ubuntu-latest
             update-coverage: true
             run-diff: true
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
 
       - name: Cache go modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -67,4 +60,54 @@ jobs:
 
       - name: Upload coverage to Codecov
         if: ${{ matrix.update-coverage }}
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: windows
+            goarch: amd64
+            ext: .exe
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: linux
+            goarch: arm64
+            ext: ""
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+
+    steps:
+      - uses: actions/setup-go@v4
+        with:
+          go-version: stable
+      - uses: actions/checkout@v4
+
+      - name: Cache go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+
+      - name: Build CLI binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          cd internal/app/dogma
+          mkdir -p build
+          go build -o build/dogma.${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dogma-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: internal/app/dogma/build/dogma.${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
