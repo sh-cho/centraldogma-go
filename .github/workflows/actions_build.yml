@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v5
 
       - name: Cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -85,13 +85,13 @@ jobs:
             ext: ""
 
     steps:
-      - uses: actions/setup-go@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: stable
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Cache go modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -107,7 +107,7 @@ jobs:
           go build -o build/dogma.${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dogma-${{ matrix.goos }}-${{ matrix.goarch }}
           path: internal/app/dogma/build/dogma.${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
